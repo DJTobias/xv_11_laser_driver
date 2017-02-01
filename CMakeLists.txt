@@ -1,11 +1,13 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(xv_11_laser_driver)
 
+##SET(OpenCV2_INCLUDE_DIRS /home/ubuntu/src/opencv-3.1.0/modules/cudev/include;/home/ubuntu/src/opencv-3.1.0/modules/core/include;/home/ubuntu/src/opencv-3.1.0/modules/cudaarithm/include;/home/ubuntu/src/opencv-3.1.0/modules/flann/include;/home/ubuntu/src/opencv-3.1.0/modules/imgproc/include;/home/ubuntu/src/opencv-3.1.0/modules/ml/include;/home/ubuntu/src/opencv-3.1.0/modules/photo/include;/home/ubuntu/src/opencv-3.1.0/modules/video/include;/home/ubuntu/src/opencv-3.1.0/modules/viz/include;/home/ubuntu/src/opencv-3.1.0/modules/cudabgsegm/include;/home/ubuntu/src/opencv-3.1.0/modules/cudafilters/include;/home/ubuntu/src/opencv-3.1.0/modules/cudawarping/include;/home/ubuntu/src/opencv-3.1.0/modules/imgcodecs/include;/home/ubuntu/src/opencv-3.1.0/modules/shape/include;/home/ubuntu/src/opencv-3.1.0/modules/videoio/include;/home/ubuntu/src/opencv-3.1.0/modules/cudacodec/include;/home/ubuntu/src/opencv-3.1.0/modules/highgui/include;/home/ubuntu/src/opencv-3.1.0/modules/objdetect/include;/home/ubuntu/src/opencv-3.1.0/modules/superres/include;/home/ubuntu/src/opencv-3.1.0/modules/ts/include;/home/ubuntu/src/opencv-3.1.0/modules/cudaobjdetect/include;/home/ubuntu/src/opencv-3.1.0/modules/features2d/include;/home/ubuntu/src/opencv-3.1.0/modules/calib3d/include;/home/ubuntu/src/opencv-3.1.0/modules/cudafeatures2d/include;/home/ubuntu/src/opencv-3.1.0/modules/cudastereo/include;/home/ubuntu/src/opencv-3.1.0/modules/videostab/include)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp sensor_msgs)
-
+find_package(catkin REQUIRED COMPONENTS roscpp sensor_msgs laser_geometry cv_bridge std_msgs image_transport)
+find_package(Eigen3 REQUIRED)
+##find_package(OpenCV 3.1.0 REQUIRED core highgui imgproc imgcodecs)
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system)
 
@@ -62,7 +64,11 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(include
   ${catkin_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIRS}
+ ## ${OpenCV_INCLUDE_DIRS}
 )
+
+
 
 ## Declare a cpp library
 # add_library(xv_11_laser_driver
@@ -81,7 +87,8 @@ add_dependencies(neato_laser_publisher xv_11_laser_driver_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(neato_laser_publisher
-  ${catkin_LIBRARIES}
+  ${catkin_LIBRARIES} 
+  ${OpenCV_LIBRARIES}
 )
 
 #############
@@ -138,4 +145,3 @@ install(DIRECTORY include/${PROJECT_NAME}/
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
-
