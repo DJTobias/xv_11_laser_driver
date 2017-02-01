@@ -34,9 +34,24 @@
 
 #include <ros/ros.h>
 #include <sensor_msgs/LaserScan.h>
+#include <sensor_msgs/PointCloud2.h> //new
+#include <sensor_msgs/PointCloud.h> //new
+#include <sensor_msgs/Image.h>
+//#include <pcl/io/pcd_io.h>
 #include <boost/asio.hpp>
 #include <xv_11_laser_driver/xv11_laser.h>
 #include <std_msgs/UInt16.h>
+#include <opencv2/core.hpp>
+//#include <opencv2/core/core.hpp>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/utility.hpp>
+#include <image_transport/image_transport.h>
+#include <cv_bridge/cv_bridge.h>
+#include <sensor_msgs/image_encodings.h>
+#include <laser_geometry/laser_geometry.h>//new
+
 
 int main(int argc, char **argv)
 {
@@ -50,19 +65,22 @@ int main(int argc, char **argv)
   int firmware_number;
  
   std_msgs::UInt16 rpms; 
+  laser_geometry::LaserProjection projector_;//new
+  
 
-  priv_nh.param("port", port, std::string("/dev/ttyUSB0"));
+  priv_nh.param("port", port, std::string("/dev/ttyUSB1"));
   priv_nh.param("baud_rate", baud_rate, 115200);
-  priv_nh.param("frame_id", frame_id, std::string("neato_laser"));
+  priv_nh.param("frame_id", frame_id, std::string("map"));
   priv_nh.param("firmware_version", firmware_number, 1);
 
   boost::asio::io_service io;
 
   try {
     xv_11_laser_driver::XV11Laser laser(port, baud_rate, firmware_number, io);
-    ros::Publisher laser_pub = n.advertise<sensor_msgs::LaserScan>("scan", 1000);
+    ros::Publisher laser_pub = n.advertise<sensor_msgs::LaserScan>("scan", 1000); //original
     ros::Publisher motor_pub = n.advertise<std_msgs::UInt16>("rpms",1000);
-
+    ros::Publisher point_pub = n.advertise<sensor_msgs::PointCloud>("point", 1000); //new was "points"
+    ros::Publisher image_pub = n.advertise<sensor_msgs::Image>("lidargrid", 10);
     while (ros::ok()) {
       sensor_msgs::LaserScan::Ptr scan(new sensor_msgs::LaserScan);
       scan->header.frame_id = frame_id;
@@ -70,8 +88,39 @@ int main(int argc, char **argv)
       laser.poll(scan);
       rpms.data=laser.rpms;
       laser_pub.publish(scan);
-      motor_pub.publish(rpms);
+      sensor_msgs::PointCloud cloud; //new
+      projector_.projectLaser(*scan,cloud); //new
 
+      // Create a blank greyscale opencv image.
+      // iterate over points in cloud.
+      //   for each point, map to pixel.
+      // convert opencv image to ros Image message
+      // publish ros image message.
+      //sensor_msgs::ImagePtr toImageMsg() const;
+      
+      int width = 100;
+      cv::Mat grey = cv::Mat::zeros(width, width, CV_8UC1);
+
+
+      point_pub.publish(cloud);   //new
+      motor_pub.publish(rpms);
+      for (int i=0; i < cloud.points.size(); i++){
+      //for (; pt.x != pt.x.end(); i){
+        geometry_msgs::Point32 pt = cloud.points[i];
+        double x = (double)pt.x;
+        double y = (double)pt.y;
+        int xPixel = (int)(((x+5.0)/10.0)*width);
+        int yPixel = (int)(((y+5.0)/10.0)*width);
+        if(xPixel >= 0 && xPixel < width && yPixel >= 0 && yPixel < width) {   
+            grey.at<uint8_t>(xPixel,yPixel)=255;
+        }
+        //grey.at<uint8_t>(0,0)=255;
+
+      }
+      cv_bridge::CvImage out_msg;
+      out_msg.encoding = sensor_msgs::image_encodings::TYPE_8UC1;
+      out_msg.image = grey;
+      image_pub.publish(out_msg);
     }
     laser.close();
     return 0;
